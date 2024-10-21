@@ -1,8 +1,10 @@
-const { listenToEvents } = require('./eventListeners');
+const { listenToFactoryEvents } = require('./eventListeners');
 
 async function main() {
     console.log("Starting relayer service...");
-    listenToEvents();
+    
+    // Start listening to events from the HTLC Factory on both Manta and Morph chains
+    listenToFactoryEvents();
 }
 
 main().catch((error) => {

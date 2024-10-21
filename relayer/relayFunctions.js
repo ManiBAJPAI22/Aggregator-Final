@@ -1,40 +1,84 @@
 const ethers = require('ethers');
 const config = require('./config');
 
-// Function to relay proof to Morph chain
-const relayToMorph = async (hashLock) => {
-    const signer = new ethers.Wallet(config.privateKey, new ethers.providers.JsonRpcProvider(config.morphRpcUrl));
-    const morphHtlcContract = new ethers.Contract(config.morphHtlcAddress, config.htlcABI, signer);
+// Relayer wallet for signing transactions on both chains
+const mantaSigner = new ethers.Wallet(config.privateKey, new ethers.providers.JsonRpcProvider(config.mantaRpcUrl));
+const morphSigner = new ethers.Wallet(config.privateKey, new ethers.providers.JsonRpcProvider(config.morphRpcUrl));
 
-    // Replace this with actual preimage logic based on your setup
-    const preimage = "<PREIMAGE>";
-
+// Function to relay proof to the Morph chain (unlock HTLC contract on Morph)
+const relayToMorph = async (htlcAddress, preimage) => {
     try {
-        const tx = await morphHtlcContract.unlock(preimage);
-        console.log(`Unlocking on Morph: ${tx.hash}`);
+        const htlcContract = new ethers.Contract(htlcAddress, config.htlcABI, morphSigner);
+
+        console.log(`Relaying proof to Morph for HTLC: ${htlcAddress}`);
+        
+        // Unlock the HTLC with the provided preimage
+        const tx = await htlcContract.unlock(preimage);
+        console.log(`Unlock transaction sent on Morph chain. TX Hash: ${tx.hash}`);
+        
+        // Wait for transaction confirmation
         await tx.wait();
-        console.log(`Unlocked on Morph chain`);
+        console.log(`HTLC unlocked on Morph chain: ${htlcAddress}`);
     } catch (error) {
-        console.error("Error unlocking on Morph:", error);
+        console.error("Error relaying proof to Morph:", error);
     }
 };
 
-// Function to relay proof to Manta chain
-const relayToManta = async (hashLock) => {
-    const signer = new ethers.Wallet(config.privateKey, new ethers.providers.JsonRpcProvider(config.mantaRpcUrl));
-    const mantaHtlcContract = new ethers.Contract(config.mantaHtlcAddress, config.htlcABI, signer);
-
-    // Replace this with actual preimage logic based on your setup
-    const preimage = "<PREIMAGE>";
-
+// Function to relay proof to the Manta chain (unlock HTLC contract on Manta)
+const relayToManta = async (htlcAddress, preimage) => {
     try {
-        const tx = await mantaHtlcContract.unlock(preimage);
-        console.log(`Unlocking on Manta: ${tx.hash}`);
+        const htlcContract = new ethers.Contract(htlcAddress, config.htlcABI, mantaSigner);
+
+        console.log(`Relaying proof to Manta for HTLC: ${htlcAddress}`);
+        
+        // Unlock the HTLC with the provided preimage
+        const tx = await htlcContract.unlock(preimage);
+        console.log(`Unlock transaction sent on Manta chain. TX Hash: ${tx.hash}`);
+        
+        // Wait for transaction confirmation
         await tx.wait();
-        console.log(`Unlocked on Manta chain`);
+        console.log(`HTLC unlocked on Manta chain: ${htlcAddress}`);
     } catch (error) {
-        console.error("Error unlocking on Manta:", error);
+        console.error("Error relaying proof to Manta:", error);
     }
 };
 
-module.exports = { relayToMorph, relayToManta };
+// Function to trigger refund on the Morph chain if the time lock has expired
+const refundOnMorph = async (htlcAddress) => {
+    try {
+        const htlcContract = new ethers.Contract(htlcAddress, config.htlcABI, morphSigner);
+
+        console.log(`Triggering refund on Morph for HTLC: ${htlcAddress}`);
+        
+        // Call refund on the HTLC contract
+        const tx = await htlcContract.refund();
+        console.log(`Refund transaction sent on Morph chain. TX Hash: ${tx.hash}`);
+        
+        // Wait for transaction confirmation
+        await tx.wait();
+        console.log(`Refund processed on Morph chain: ${htlcAddress}`);
+    } catch (error) {
+        console.error("Error triggering refund on Morph:", error);
+    }
+};
+
+// Function to trigger refund on the Manta chain if the time lock has expired
+const refundOnManta = async (htlcAddress) => {
+    try {
+        const htlcContract = new ethers.Contract(htlcAddress, config.htlcABI, mantaSigner);
+
+        console.log(`Triggering refund on Manta for HTLC: ${htlcAddress}`);
+        
+        // Call refund on the HTLC contract
+        const tx = await htlcContract.refund();
+        console.log(`Refund transaction sent on Manta chain. TX Hash: ${tx.hash}`);
+        
+        // Wait for transaction confirmation
+        await tx.wait();
+        console.log(`Refund processed on Manta chain: ${htlcAddress}`);
+    } catch (error) {
+        console.error("Error triggering refund on Manta:", error);
+    }
+};
+
+module.exports = { relayToMorph, relayToManta, refundOnMorph, refundOnManta };
